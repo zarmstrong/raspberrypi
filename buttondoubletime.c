@@ -83,21 +83,6 @@ void hc595Ones_shift(unsigned char dat)
         int i;
 
         for(i=0;i<8;i++){
-                digitalWrite(SDIB, 0x80 & (dat << i));
-                digitalWrite(SRCLKB, 1);
-                delay(1);
-                digitalWrite(SRCLKB, 0);                
-        }
-                digitalWrite(RCLKB, 1);
-                delay(1);
-                digitalWrite(RCLKB, 0);
-}
-
-void hc595Tens_shift(unsigned char dat)
-{
-        int i;
-
-        for(i=0;i<8;i++){
                 digitalWrite(SDI, 0x80 & (dat << i));
                 digitalWrite(SRCLK, 1);
                 delay(1);
@@ -106,6 +91,21 @@ void hc595Tens_shift(unsigned char dat)
                 digitalWrite(RCLK, 1);
                 delay(1);
                 digitalWrite(RCLK, 0);
+}
+
+void hc595Tens_shift(unsigned char dat)
+{
+        int i;
+
+        for(i=0;i<8;i++){
+                digitalWrite(SDIB, 0x80 & (dat << i));
+                digitalWrite(SRCLKB, 1);
+                delay(1);
+                digitalWrite(SRCLKB, 0);                
+        }
+                digitalWrite(RCLKB, 1);
+                delay(1);
+                digitalWrite(RCLKB, 0);
 }
 
 static void *countdown(void *countDownStatus)
@@ -119,20 +119,35 @@ static void *countdown(void *countDownStatus)
         int i,g,x;
          x_startTime=clock();
          printf("coutdown started\n");
-         for(i=6;i>=0;i--){
-                printf("countDownStatus/pthread_state: %i\n", *pthread_state);
+        hc595Ones_shift(SegCode[6]);
+        hc595Tens_shift(SegCode[0]);
+        for (x=0;x<100;x++)
+        {
+                if (*pthread_state == 0)
+                {
+                        hc595Ones_shift(codeDash);
+                        hc595Tens_shift(codeDash);
+                        //(bool)*countDownStatus=0;
+                        pthread_exit(0);                         
+                }
+                delay(10);
+        }
+
+         for(i=5;i>=0;i--){
                 if (*pthread_state == 0)
                 {
                         //(bool)countDownStatus=0;
                         pthread_exit(0); 
                 }
                 hc595Ones_shift(SegCode[i]);
-                for(g=10;g>=0;g--){
+                for(g=9;g>=0;g--){
+                        printf("countDownStatus/pthread_state: %i\n", *pthread_state);
                         hc595Tens_shift(SegCode[g]);
                         for (x=0;x<100;x++)
                         {
                                 if (*pthread_state == 0)
                                 {
+                                        printf("countDownStatus/pthread_state: %i\n", *pthread_state);
                                         hc595Ones_shift(codeDash);
                                         hc595Tens_shift(codeDash);
                                         //(bool)*countDownStatus=0;
@@ -145,6 +160,7 @@ static void *countdown(void *countDownStatus)
         hc595Ones_shift(codeDash);
         hc595Tens_shift(codeDash);
         //*countDownStatus=0;
+        *pthread_state = 0;
         pthread_exit(0);                         
 }
 
@@ -164,10 +180,10 @@ int main(void)
         hc595Tens_shift(codeDash);
         
         while(1){
-                printf("button data: %i\nThread ID: %i\ncountDownStatus: ", digitalRead(BTN), iret,countDownStatus);
+                printf("button data: %i\ncountDownStatus: %i\n", digitalRead(BTN), countDownStatus);
                 if (digitalRead(BTN))
                 {       
-                        if (buttonStatus ==1)
+                        if (buttonStatus == 1)
                         {
                                 printf("button held\n");
                         }
@@ -195,7 +211,7 @@ int main(void)
                 }
                 else 
                 {      
-                        if (buttonStatus ==1)
+                        if (buttonStatus == 1)
                         {
                                 buttonStatus=0;
                                 printf("Button released\n");       
