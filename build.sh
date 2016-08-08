@@ -1,4 +1,5 @@
 #!/bin/bash
 
-gcc buttondoubletime.c  -o runme  -lwiringPi
+gcc buttondoubletime.c  -o runme  -lwiringPi -lpthread 
+
 
